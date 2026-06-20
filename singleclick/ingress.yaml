@@ -13,3 +13,12 @@ spec:
                 name: nginx-service
                 port:
                   number: 80
+      http:
+        paths:  
+          -path: /busybox
+            pathType: Prefix
+            backend:
+              service:
+                name: busybox-service
+                port:
+                  number: 80
