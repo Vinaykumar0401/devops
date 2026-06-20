@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deploy
+spec:
+  hpa:
+    minReplicas: 1
+    maxReplicas: 5
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 50
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - image: nginx
+          name: nginx-container
+          command:
+          - "sh"
+          - "-c"
+          - "echo nginx && sleep 3600"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: pvc
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: pvc
+          persistentVolumeClaim:
+            claimName: pvc
+  restartPolicy: Always
