@@ -3,16 +3,6 @@ kind: Deployment
 metadata:
   name: nginx-deploy
 spec:
-  hpa:
-    minReplicas: 1
-    maxReplicas: 5
-    metrics:
-      - type: Resource
-        resource:
-          name: cpu
-          target:
-            type: Utilization
-            averageUtilization: 50
   replicas: 2
   selector:
     matchLabels:
@@ -22,13 +12,14 @@ spec:
       labels:
         app: nginx
     spec:
+      restartPolicy: Always
       containers:
         - image: nginx
           name: nginx-container
           command:
-          - "sh"
-          - "-c"
-          - "echo nginx && sleep 3600"
+            - "sh"
+            - "-c"
+            - "echo nginx && sleep 3600"
           ports:
             - containerPort: 80
           volumeMounts:
@@ -38,4 +29,3 @@ spec:
         - name: pvc
           persistentVolumeClaim:
             claimName: pvc
-  restartPolicy: Always
