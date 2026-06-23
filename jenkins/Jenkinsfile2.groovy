@@ -10,7 +10,7 @@ pipeline {
                         for (int j = 1; j <= i; j++) {
                             line += '* '
                         }
-                        echo line
+                        println(line)
                     }
                 }
             }
@@ -24,7 +24,7 @@ pipeline {
                         for (int j = 1; j <= i; j++) {
                             line += '* '
                         }
-                        echo line
+                        println(line)
                     }
                 }
             }
