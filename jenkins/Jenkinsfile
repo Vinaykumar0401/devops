@@ -1,0 +1,21 @@
+pipeline {
+    agent any
+    stages {
+        stage("Build") {
+            steps {
+                echo 'Building...'
+            }
+        }
+        stage("Test") {
+            agent { label 'java-agent-slave' }
+            steps {
+                echo 'Testing...'
+            }
+        }
+        stage("Deploy") {
+            steps {
+                echo 'Deploying...'
+            }
+        }
+    }
+}

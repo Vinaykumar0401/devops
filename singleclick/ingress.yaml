@@ -13,9 +13,9 @@ spec:
                 name: nginx-service
                 port:
                   number: 80
-      http:
-        paths:  
-          -path: /busybox
+    - http:
+        paths:
+          - path: /busybox
             pathType: Prefix
             backend:
               service:
