@@ -21,12 +21,12 @@ pipeline {
                 sh 'ls -la'
                 sh 'java -version'
                 sh 'mvn -version'
-                sh 'mvn clean package'
+                sh 'mvn package'
             }
         }
 
         stage('Test') {
-            agent { label 'java-agent-slave' }
+            agent { label 'java-node' }
 
             tools {
                 jdk 'JDK17'
@@ -35,7 +35,6 @@ pipeline {
 
             steps {
                 sh 'java -version'
-                sh 'mvn test'
             }
         }
 
