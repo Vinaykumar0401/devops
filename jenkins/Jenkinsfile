@@ -2,6 +2,14 @@ pipeline {
     agent { label 'java-node' }
 
     stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/spring-projects/spring-petclinic.git'
+            }
+        }
+
         stage('Build') {
             tools {
                 jdk 'JDK17'
@@ -9,6 +17,8 @@ pipeline {
             }
 
             steps {
+                sh 'pwd'
+                sh 'ls -la'
                 sh 'java -version'
                 sh 'mvn -version'
                 sh 'mvn clean package'
@@ -17,14 +27,21 @@ pipeline {
 
         stage('Test') {
             agent { label 'java-agent-slave' }
+
+            tools {
+                jdk 'JDK17'
+                maven 'maven'
+            }
+
             steps {
-                echo 'Testing...'
+                sh 'java -version'
+                sh 'mvn test'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo 'Deploying...'
+                echo 'Deploy stage'
             }
         }
     }
