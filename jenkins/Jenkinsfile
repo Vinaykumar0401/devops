@@ -1,10 +1,17 @@
 pipeline {
     agent any
+    tools {
+        jdk 'JDK17'
+        maven 'Maven'
+    }
     stages {
-        stage("Build") {
+        stage("mvnBuild") {
+            agent { label 'java-agent-slave' }
             steps {
-                echo 'Building...'
-            }
+            sh 'java -version'
+            sh 'mvn -version'
+            sh 'mvn clean package'
+        }
         }
         stage("Test") {
             agent { label 'java-agent-slave' }
