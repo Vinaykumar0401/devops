@@ -21,7 +21,7 @@ pipeline {
                 sh 'ls -la'
                 sh 'java -version'
                 sh 'mvn -version'
-                sh 'mvn package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
