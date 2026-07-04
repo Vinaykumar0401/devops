@@ -26,8 +26,6 @@ pipeline {
         }
 
         stage('Test') {
-            agent { label 'java-node' }
-
             tools {
                 jdk 'JDK17'
                 maven 'maven'
@@ -35,6 +33,7 @@ pipeline {
 
             steps {
                 sh 'java -version'
+                // sh 'mvn test'
             }
         }
 
