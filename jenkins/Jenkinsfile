@@ -31,22 +31,6 @@ pipeline {
         }
 
 
-        stage('Prepare Test Environment') {
-            steps {
-                sh '''
-                    echo "Preparing PostgreSQL test environment"
-
-                    if [ -f docker-compose.yml ]; then
-                        sed -i '/ports:/,+1d' docker-compose.yml
-                    fi
-
-                    echo "Docker compose configuration:"
-                    cat docker-compose.yml
-                '''
-            }
-        }
-
-
         stage('Build') {
             steps {
                 sh 'java -version'
@@ -56,9 +40,37 @@ pipeline {
         }
 
 
+        stage('Start Test Database') {
+            steps {
+                sh '''
+                    echo "Starting PostgreSQL container for tests"
+
+                    docker rm -f petclinic-postgres || true
+
+                    docker run -d \
+                    --name petclinic-postgres \
+                    -e POSTGRES_DB=petclinic \
+                    -e POSTGRES_USER=petclinic \
+                    -e POSTGRES_PASSWORD=petclinic \
+                    -p 5433:5432 \
+                    postgres:18.4
+
+                    echo "Waiting for PostgreSQL startup"
+                    sleep 15
+
+                    docker ps
+                '''
+            }
+        }
+
+
         stage('Test') {
             steps {
-                sh 'mvn test'
+                sh '''
+                    mvn test \
+                    -Dspring.docker.compose.skip-in-tests=true \
+                    -Dspring.profiles.active=postgres
+                '''
             }
 
             post {
@@ -130,6 +142,12 @@ pipeline {
 
 
         always {
+            sh '''
+                echo "Cleaning test PostgreSQL container"
+
+                docker rm -f petclinic-postgres || true
+            '''
+
             cleanWs()
         }
     }
