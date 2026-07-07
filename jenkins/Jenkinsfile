@@ -1,49 +1,69 @@
 pipeline {
 
-    agent { label 'java-node' }
+    agent {
+        label 'java-node'
+    }
 
     tools {
         jdk 'JDK17'
         maven 'maven'
     }
 
-    environment {
-        SONAR_HOME = tool 'sonar'
-    }
 
     stages {
 
+
         stage('Clean Workspace') {
+
             steps {
+
                 cleanWs()
+
             }
+
         }
 
 
         stage('Checkout') {
+
             steps {
+
                 git 'https://github.com/spring-projects/spring-petclinic.git'
+
             }
+
         }
 
 
         stage('Build & Test') {
+
             steps {
+
                 sh '''
-                mvn clean verify -DskipTests=false
+                mvn clean verify
                 '''
+
             }
+
             post {
+
                 always {
-                    junit '**/target/surefire-reports/*.xml'
+
+                    junit allowEmptyResults: true,
+                          testResults: '**/target/surefire-reports/*.xml'
+
                 }
+
             }
+
         }
 
 
         stage('SonarQube Analysis') {
+
             steps {
-                withSonarQubeEnv('sonarqube') {
+
+                withSonarQubeEnv('SonarQube') {
 
                     sh '''
                     mvn sonar:sonar \
@@ -52,7 +72,9 @@ pipeline {
                     '''
 
                 }
+
             }
+
         }
 
 
@@ -60,9 +82,9 @@ pipeline {
 
             steps {
 
-                timeout(time:10, unit:'MINUTES') {
+                timeout(time: 10, unit: 'MINUTES') {
 
-                    waitForQualityGate abortPipeline:true
+                    waitForQualityGate abortPipeline: true
 
                 }
 
@@ -114,16 +136,33 @@ pipeline {
 
         }
 
+
     }
 
 
     post {
 
+
         always {
 
-            echo "Cleaning workspace"
+            script {
 
-            cleanWs()
+                if (env.WORKSPACE) {
+
+                    echo "Cleaning workspace"
+
+                    cleanWs()
+
+                }
+
+            }
+
+        }
+
+
+        success {
+
+            echo "Pipeline completed successfully"
 
         }
 
@@ -134,12 +173,6 @@ pipeline {
 
         }
 
-
-        success {
-
-            echo "Pipeline successful"
-
-        }
 
     }
 
