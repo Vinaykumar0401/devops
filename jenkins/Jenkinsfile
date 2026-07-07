@@ -34,15 +34,13 @@ pipeline {
         stage('Prepare Test Environment') {
             steps {
                 sh '''
-                    echo "Checking docker compose file"
+                    echo "Preparing PostgreSQL test environment"
 
-                    ls -la
-
-                    # Remove postgres host port mapping to avoid conflict with SonarQube PostgreSQL
                     if [ -f docker-compose.yml ]; then
                         sed -i '/ports:/,+1d' docker-compose.yml
                     fi
 
+                    echo "Docker compose configuration:"
                     cat docker-compose.yml
                 '''
             }
