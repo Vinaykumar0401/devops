@@ -1,4 +1,5 @@
 pipeline {
+
     agent { label 'java-node' }
 
     tools {
@@ -29,6 +30,25 @@ pipeline {
             }
         }
 
+
+        stage('Prepare Test Environment') {
+            steps {
+                sh '''
+                    echo "Checking docker compose file"
+
+                    ls -la
+
+                    # Remove postgres host port mapping to avoid conflict with SonarQube PostgreSQL
+                    if [ -f docker-compose.yml ]; then
+                        sed -i '/ports:/,+1d' docker-compose.yml
+                    fi
+
+                    cat docker-compose.yml
+                '''
+            }
+        }
+
+
         stage('Build') {
             steps {
                 sh 'java -version'
@@ -36,6 +56,7 @@ pipeline {
                 sh 'mvn clean compile'
             }
         }
+
 
         stage('Test') {
             steps {
@@ -49,6 +70,7 @@ pipeline {
             }
         }
 
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -61,6 +83,7 @@ pipeline {
             }
         }
 
+
         stage('Quality Gate') {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
@@ -69,20 +92,24 @@ pipeline {
             }
         }
 
+
         stage('Package') {
             steps {
                 sh 'mvn package -DskipTests'
             }
         }
 
+
         stage('Docker Build') {
             steps {
                 sh '''
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+
                     docker images | grep ${IMAGE_NAME}
                 '''
             }
         }
+
 
         stage('Deploy') {
             steps {
@@ -91,18 +118,21 @@ pipeline {
         }
     }
 
+
     post {
 
         success {
             echo "Pipeline completed successfully."
         }
 
+
         failure {
-            echo "Pipeline failed. Workspace kept for debugging."
+            echo "Pipeline failed."
         }
 
+
         always {
-            echo "Skipping workspace cleanup temporarily"
+            cleanWs()
         }
     }
 }
