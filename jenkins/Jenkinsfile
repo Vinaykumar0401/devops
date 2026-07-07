@@ -1,136 +1,74 @@
 pipeline {
 
-    agent {
-        label 'java-node'
-    }
+    agent { label 'java-node' }
 
     tools {
         jdk 'JDK17'
         maven 'maven'
     }
 
-    options {
-
-        buildDiscarder(
-            logRotator(
-                numToKeepStr: '3',
-                artifactNumToKeepStr: '3'
-            )
-        )
-
-        disableConcurrentBuilds()
-
-        timestamps()
-
-        timeout(
-            time: 40,
-            unit: 'MINUTES'
-        )
-    }
-
-
     environment {
-
-        IMAGE_NAME = "spring-petclinic"
-        IMAGE_TAG  = "${BUILD_NUMBER}"
-
-        MAVEN_OPTS = "-Xmx1024m -Xms512m"
+        SONAR_HOME = tool 'sonar'
     }
-
 
     stages {
 
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
 
         stage('Checkout') {
-
             steps {
-
-                cleanWs()
-
-                git branch: 'main',
-                    url: 'https://github.com/spring-projects/spring-petclinic.git'
+                git 'https://github.com/spring-projects/spring-petclinic.git'
             }
         }
 
 
-        stage('Build') {
-
+        stage('Build & Test') {
             steps {
-
                 sh '''
-                    java -version
-                    mvn -version
-
-                    mvn clean compile
+                mvn clean verify -DskipTests=false
                 '''
             }
-        }
-
-
-        stage('Test') {
-
-            steps {
-
-                sh '''
-                    docker ps
-
-                    mvn test \
-                    -Dspring.docker.compose.skip.in-tests=false \
-                    -DforkCount=1 \
-                    -DreuseForks=false
-                '''
-            }
-
-
             post {
-
                 always {
-
-                    junit(
-                        allowEmptyResults: true,
-                        testResults: 'target/surefire-reports/*.xml'
-                    )
+                    junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
-
 
 
         stage('SonarQube Analysis') {
-
             steps {
-
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('sonarqube') {
 
                     sh '''
-
                     mvn sonar:sonar \
-                    -Dsonar.projectKey=spring-petclinic \
-                    -Dsonar.projectName=spring-petclinic
-
+                    -Dsonar.projectKey=petclinic \
+                    -Dsonar.projectName=petclinic
                     '''
+
                 }
             }
         }
-
 
 
         stage('Quality Gate') {
 
             steps {
 
-                timeout(
-                    time:10,
-                    unit:'MINUTES'
-                ){
+                timeout(time:10, unit:'MINUTES') {
 
-                    waitForQualityGate(
-                        abortPipeline:true
-                    )
+                    waitForQualityGate abortPipeline:true
+
                 }
-            }
-        }
 
+            }
+
+        }
 
 
         stage('Package') {
@@ -138,14 +76,12 @@ pipeline {
             steps {
 
                 sh '''
-
                 mvn package -DskipTests
-
                 '''
+
             }
+
         }
-
-
 
 
         stage('Docker Build') {
@@ -153,59 +89,56 @@ pipeline {
             steps {
 
                 sh '''
-
-                docker build \
-                -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-                docker images | grep ${IMAGE_NAME}
-
+                docker build -t petclinic .
                 '''
+
             }
+
         }
-
-
 
 
         stage('Deploy') {
 
             steps {
 
-                echo "Deployment Successful"
+                sh '''
+                docker rm -f petclinic || true
+
+                docker run -d \
+                --name petclinic \
+                -p 8080:8080 \
+                petclinic
+                '''
 
             }
+
         }
 
     }
 
 
-
     post {
 
-
         always {
-
-            echo "Cleaning docker test containers"
-
-            sh '''
-            docker compose down -v || true
-            docker rm -f petclinic-postgres || true
-            '''
 
             echo "Cleaning workspace"
 
             cleanWs()
-        }
 
-
-        success {
-
-            echo "Pipeline completed successfully"
         }
 
 
         failure {
 
             echo "Pipeline failed"
+
+        }
+
+
+        success {
+
+            echo "Pipeline successful"
+
         }
 
     }
