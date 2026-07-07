@@ -84,32 +84,6 @@ pipeline {
             }
         }
 
-        /*
-        Uncomment after creating Docker Hub credentials
-        stage('Docker Push') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \
-                        $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
-
-                        docker push \
-                        $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
-                    '''
-                }
-            }
-        }
-        */
-
         stage('Deploy') {
             steps {
                 echo "Deployment Successful"
@@ -124,11 +98,11 @@ pipeline {
         }
 
         failure {
-            echo "Pipeline failed."
+            echo "Pipeline failed. Workspace kept for debugging."
         }
 
         always {
-            cleanWs()
+            echo "Skipping workspace cleanup temporarily"
         }
     }
 }
