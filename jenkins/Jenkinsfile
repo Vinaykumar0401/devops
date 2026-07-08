@@ -1,5 +1,12 @@
 pipeline {
     agent { label 'java-node' }
+    
+    options {
+        buildDiscarder(logRotator(
+            numToKeepStr: '3',
+            artifactNumToKeepStr: '3'
+        ))
+    }
 
     tools {
         jdk 'JDK17'
