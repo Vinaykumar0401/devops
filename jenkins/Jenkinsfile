@@ -11,10 +11,28 @@ pipeline {
 
     stages {
 
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/spring-projects/spring-petclinic.git'
+            }
+        }
+
+        stage('Fix Docker Compose') {
+            steps {
+                sh '''
+                    echo "Updating PostgreSQL port to avoid conflict with SonarQube..."
+                    sed -i 's/"5432:5432"/"5433:5432"/' docker-compose.yml
+
+                    echo "Updated docker-compose.yml:"
+                    cat docker-compose.yml
+                '''
             }
         }
 
@@ -63,9 +81,6 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker rm -f petclinic || true
-                    docker rmi petclinic || true
-
                     docker build -t petclinic .
                 '''
             }
@@ -77,10 +92,9 @@ pipeline {
                     docker rm -f petclinic || true
 
                     docker run -d \
-                        --name petclinic \
-                        -p 8080:8080 \
-                        --restart unless-stopped \
-                        petclinic
+                      --name petclinic \
+                      -p 8080:8080 \
+                      petclinic
                 '''
             }
         }
@@ -89,8 +103,12 @@ pipeline {
     post {
 
         always {
-            echo "Workspace cleanup disabled for debugging."
-            // cleanWs()
+            script {
+                if (env.WORKSPACE) {
+                    echo "Cleaning workspace..."
+                    cleanWs()
+                }
+            }
         }
 
         success {
