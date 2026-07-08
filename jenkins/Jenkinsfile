@@ -1,12 +1,14 @@
 pipeline {
-
-    agent {
-        label 'java-node'
-    }
+    agent { label 'java-node' }
 
     tools {
         jdk 'JDK17'
         maven 'maven'
+    }
+
+    environment {
+        IMAGE_NAME = 'spring-petclinic'
+        IMAGE_TAG = 'latest'
     }
 
     stages {
@@ -27,25 +29,35 @@ pipeline {
         stage('Fix Docker Compose') {
             steps {
                 sh '''
-                    echo "Updating PostgreSQL port to avoid conflict with SonarQube..."
-                    sed -i 's/"5432:5432"/"5433:5432"/' docker-compose.yml
+                if [ -f docker-compose.yml ]; then
+                    sed -i 's/"5432:5432"/"5433:5432"/g' docker-compose.yml
+                fi
 
-                    echo "Updated docker-compose.yml:"
-                    cat docker-compose.yml
+                echo "Updated docker-compose.yml"
+                cat docker-compose.yml
                 '''
             }
         }
 
         stage('Build & Test') {
             steps {
-                sh '''
-                    mvn clean verify
-                '''
+                sh 'mvn clean verify'
             }
             post {
                 always {
-                    junit allowEmptyResults: true,
-                          testResults: '**/target/surefire-reports/*.xml'
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Check Sonar Connection') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                    echo "SONAR_HOST_URL=$SONAR_HOST_URL"
+
+                    curl -v $SONAR_HOST_URL/api/system/status
+                    '''
                 }
             }
         }
@@ -54,9 +66,9 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=petclinic \
-                        -Dsonar.projectName=petclinic
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=petclinic \
+                    -Dsonar.projectName=petclinic
                     '''
                 }
             }
@@ -72,16 +84,14 @@ pipeline {
 
         stage('Package') {
             steps {
-                sh '''
-                    mvn package -DskipTests
-                '''
+                sh 'mvn package -DskipTests'
             }
         }
 
         stage('Docker Build') {
             steps {
                 sh '''
-                    docker build -t petclinic .
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 '''
             }
         }
@@ -89,34 +99,31 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                    docker rm -f petclinic || true
+                docker rm -f petclinic || true
 
-                    docker run -d \
-                      --name petclinic \
-                      -p 8080:8080 \
-                      petclinic
+                docker run -d \
+                  --name petclinic \
+                  -p 8080:8080 \
+                  ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
     }
 
     post {
-
         always {
             script {
-                if (env.WORKSPACE) {
-                    echo "Cleaning workspace..."
-                    cleanWs()
-                }
+                echo "Cleaning workspace..."
+                cleanWs()
             }
         }
 
         success {
-            echo "Pipeline completed successfully."
+            echo 'Pipeline completed successfully.'
         }
 
         failure {
-            echo "Pipeline failed."
+            echo 'Pipeline failed.'
         }
     }
 }
