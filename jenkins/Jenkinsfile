@@ -1,11 +1,8 @@
 pipeline {
     agent { label 'java-node' }
-    
+
     options {
-        buildDiscarder(logRotator(
-            numToKeepStr: '3',
-            artifactNumToKeepStr: '3'
-        ))
+        buildDiscarder(logRotator(numToKeepStr: '3', artifactNumToKeepStr: '3'))
     }
 
     tools {
@@ -14,8 +11,9 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = 'spring-petclinic'
-        IMAGE_TAG = 'latest'
+        IMAGE_NAME = "vinay1504/spring-petclinic"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        LATEST_TAG = "latest"
     }
 
     stages {
@@ -29,7 +27,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/Vinaykumar0401/spring-petclinic-devops.git'
+                url: 'https://github.com/Vinaykumar0401/spring-petclinic-devops.git'
             }
         }
 
@@ -39,16 +37,13 @@ pipeline {
                 if [ -f docker-compose.yml ]; then
                     sed -i 's/"5432:5432"/"5433:5432"/g' docker-compose.yml
                 fi
-
-                echo "Updated docker-compose.yml"
-                cat docker-compose.yml
                 '''
             }
         }
 
         stage('Build & Test') {
             steps {
-                sh 'mvn clean verify'
+                sh 'mvn -Dmaven.repo.local=.m2 clean verify'
             }
             post {
                 always {
@@ -57,23 +52,11 @@ pipeline {
             }
         }
 
-        stage('Check Sonar Connection') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                    echo "SONAR_HOST_URL=$SONAR_HOST_URL"
-
-                    curl -v $SONAR_HOST_URL/api/system/status
-                    '''
-                }
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                    mvn sonar:sonar \
+                    mvn -Dmaven.repo.local=.m2 sonar:sonar \
                     -Dsonar.projectKey=petclinic \
                     -Dsonar.projectName=petclinic
                     '''
@@ -89,48 +72,76 @@ pipeline {
             }
         }
 
-        stage('Package') {
+        stage('Deploy Artifact to Nexus') {
             steps {
-                sh 'mvn package -DskipTests'
+                sh 'mvn -Dmaven.repo.local=.m2 deploy -DskipTests'
             }
         }
 
         stage('Docker Build') {
             steps {
-                sh '''
+                sh """
                 docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                '''
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${LATEST_TAG}
+                """
             }
         }
 
-        stage('Deploy') {
+        stage('Docker Login') {
             steps {
-                sh '''
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                sh """
+                docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                docker push ${IMAGE_NAME}:${LATEST_TAG}
+                """
+            }
+        }
+
+        stage('Deploy Application') {
+            steps {
+                sh """
                 docker rm -f petclinic || true
 
+                docker pull ${IMAGE_NAME}:${LATEST_TAG}
+
                 docker run -d \
-                  --name petclinic \
-                  -p 8080:8080 \
-                  ${IMAGE_NAME}:${IMAGE_TAG}
-                '''
+                    --name petclinic \
+                    -p 8080:8080 \
+                    --restart unless-stopped \
+                    ${IMAGE_NAME}:${LATEST_TAG}
+                """
             }
         }
+
     }
 
     post {
-        always {
-            script {
-                echo "Cleaning workspace..."
-                cleanWs()
-            }
-        }
 
         success {
-            echo 'Pipeline completed successfully.'
+            echo "Pipeline completed successfully."
         }
 
         failure {
-            echo 'Pipeline failed.'
+            echo "Pipeline failed."
+        }
+
+        always {
+            cleanWs()
         }
     }
 }
