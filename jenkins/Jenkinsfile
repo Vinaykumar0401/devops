@@ -1,8 +1,6 @@
 @Library('my-shared-library') _
 
-import navi.company.pipeline.JavaPipeline
-
-new JavaPipeline().call(
+javaPipeline(
     agentLabel: 'java-node',
     jdk: 'JDK17',
     maven: 'maven',
@@ -18,5 +16,8 @@ new JavaPipeline().call(
     projectName: 'petclinic',
     dockerCredentialId: 'dockerhub',
     buildsToKeep: '3',
-    artifactsToKeep: '3'
+    artifactsToKeep: '3',
+    composeFileName: 'docker-compose.yml',
+    hostPort: '5433',
+    qualityGateTimeoutMinutes: 10
 )

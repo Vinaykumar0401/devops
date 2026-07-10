@@ -1,6 +1,18 @@
 # Jenkins Shared Library for Java Pipeline
 
-This shared library converts the original declarative Jenkins pipeline into a reusable Jenkins Shared Library structure.
+This shared library follows Jenkins best practices for enterprise usage.
+
+## Structure
+
+- vars/: contains the declarative pipeline entrypoint and reusable Jenkins steps.
+- src/navi/company/utils/: contains pure Groovy helper classes with no Jenkins DSL.
+
+## Flow
+
+1. The Jenkinsfile calls the shared-library entrypoint.
+2. vars/javaPipeline.groovy defines the declarative pipeline and orchestrates stages.
+3. Each stage calls reusable vars methods.
+4. Helper classes under src provide plain utility logic.
 
 ## Structure
 
