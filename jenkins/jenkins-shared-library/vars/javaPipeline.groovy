@@ -37,12 +37,6 @@ def call(Map config = [:]) {
             maven effectiveConfig.maven
         }
 
-        environment {
-            IMAGE_NAME = effectiveConfig.imageName
-            IMAGE_TAG = effectiveConfig.imageTag
-            LATEST_TAG = effectiveConfig.latestTag
-        }
-
         stages {
             stage('Clean Workspace') {
                 steps {
@@ -98,9 +92,9 @@ def call(Map config = [:]) {
             stage('Docker Build') {
                 steps {
                     dockerBuild(
-                        imageName: env.IMAGE_NAME,
-                        imageTag: env.IMAGE_TAG,
-                        latestTag: env.LATEST_TAG
+                        imageName: effectiveConfig.IMAGE_NAME,
+                        imageTag: effectiveConfig.IMAGE_TAG,
+                        latestTag: effectiveConfig.LATEST_TAG
                     )
                 }
             }
@@ -114,9 +108,9 @@ def call(Map config = [:]) {
             stage('Push Docker Image') {
                 steps {
                     dockerPush(
-                        imageName: env.IMAGE_NAME,
-                        imageTag: env.IMAGE_TAG,
-                        latestTag: env.LATEST_TAG
+                        imageName: effectiveConfig.IMAGE_NAME,
+                        imageTag: effectiveConfig.IMAGE_TAG,
+                        latestTag: effectiveConfig.LATEST_TAG
                     )
                 }
             }
@@ -124,8 +118,8 @@ def call(Map config = [:]) {
             stage('Deploy Application') {
                 steps {
                     deployContainer(
-                        imageName: env.IMAGE_NAME,
-                        latestTag: env.LATEST_TAG,
+                        imageName: effectiveConfig.IMAGE_NAME,
+                        latestTag: effectiveConfig.LATEST_TAG,
                         containerName: effectiveConfig.containerName,
                         containerPort: effectiveConfig.containerPort
                     )
