@@ -1,6 +1,6 @@
 @Library('my-shared-library') _
 
-import com.company.pipeline.JavaPipeline
+import navi.company.pipeline.JavaPipeline
 
 new JavaPipeline().call(
     agentLabel: 'java-node',

@@ -1,4 +1,4 @@
-package com.company.pipeline
+package navi.company.pipeline
 
 // Declarative pipeline orchestration class for Java projects.
 class JavaPipeline implements Serializable {
