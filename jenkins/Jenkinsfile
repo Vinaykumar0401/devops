@@ -1,153 +1,22 @@
-pipeline {
-    agent { label 'java-node' }
+@Library('my-shared-library') _
 
-    options {
-        buildDiscarder(logRotator(
-            numToKeepStr: '3',
-            artifactNumToKeepStr: '3'
-        ))
-    }
+import com.company.pipeline.JavaPipeline
 
-    tools {
-        jdk 'JDK17'
-        maven 'maven'
-    }
-
-    environment {
-        IMAGE_NAME = "vinay1504/spring-petclinic"
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        LATEST_TAG = "latest"
-    }
-
-    stages {
-
-        stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/Vinaykumar0401/spring-petclinic-devops.git'
-            }
-        }
-
-        stage('Fix Docker Compose') {
-            steps {
-                sh '''
-                if [ -f docker-compose.yml ]; then
-                    sed -i 's/"5432:5432"/"5433:5432"/g' docker-compose.yml
-                fi
-                '''
-            }
-        }
-
-        stage('Build & Test') {
-            steps {
-                sh 'mvn clean verify'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                    mvn sonar:sonar \
-                    -Dsonar.projectKey=petclinic \
-                    -Dsonar.projectName=petclinic
-                    '''
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Deploy Artifact to Nexus') {
-            steps {
-                sh 'mvn deploy -DskipTests'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                sh """
-                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:${LATEST_TAG}
-                """
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login \
-                    -u "$DOCKER_USER" \
-                    --password-stdin
-                    '''
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh """
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                docker push ${IMAGE_NAME}:${LATEST_TAG}
-                """
-            }
-        }
-
-        stage('Deploy Application') {
-            steps {
-                sh """
-                docker rm -f petclinic || true
-
-                docker image prune -f
-
-                docker pull ${IMAGE_NAME}:${LATEST_TAG}
-
-                docker run -d \
-                  --name petclinic \
-                  --restart unless-stopped \
-                  -p 8080:8080 \
-                  ${IMAGE_NAME}:${LATEST_TAG}
-                """
-            }
-        }
-    }
-
-    post {
-
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-
-        failure {
-            echo 'Pipeline failed.'
-        }
-
-        always {
-            cleanWs()
-        }
-    }
-}
+new JavaPipeline().call(
+    agentLabel: 'java-node',
+    jdk: 'JDK17',
+    maven: 'maven',
+    repoUrl: 'https://github.com/Vinaykumar0401/spring-petclinic-devops.git',
+    branch: 'main',
+    imageName: 'vinay1504/spring-petclinic',
+    imageTag: "${env.BUILD_NUMBER}",
+    latestTag: 'latest',
+    containerName: 'petclinic',
+    containerPort: '8080',
+    sonarServer: 'SonarQube',
+    projectKey: 'petclinic',
+    projectName: 'petclinic',
+    dockerCredentialId: 'dockerhub',
+    buildsToKeep: '3',
+    artifactsToKeep: '3'
+)
