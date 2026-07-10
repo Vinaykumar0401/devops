@@ -92,9 +92,9 @@ def call(Map config = [:]) {
             stage('Docker Build') {
                 steps {
                     dockerBuild(
-                        imageName: effectiveConfig.IMAGE_NAME,
-                        imageTag: effectiveConfig.IMAGE_TAG,
-                        latestTag: effectiveConfig.LATEST_TAG
+                        imageName: effectiveConfig.imageName,
+                        imageTag: effectiveConfig.imageTag,
+                        latestTag: effectiveConfig.latestTag
                     )
                 }
             }
@@ -108,9 +108,9 @@ def call(Map config = [:]) {
             stage('Push Docker Image') {
                 steps {
                     dockerPush(
-                        imageName: effectiveConfig.IMAGE_NAME,
-                        imageTag: effectiveConfig.IMAGE_TAG,
-                        latestTag: effectiveConfig.LATEST_TAG
+                        imageName: effectiveConfig.imageName,
+                        imageTag: effectiveConfig.imageTag,
+                        latestTag: effectiveConfig.latestTag
                     )
                 }
             }
@@ -118,8 +118,8 @@ def call(Map config = [:]) {
             stage('Deploy Application') {
                 steps {
                     deployContainer(
-                        imageName: effectiveConfig.IMAGE_NAME,
-                        latestTag: effectiveConfig.LATEST_TAG,
+                        imageName: effectiveConfig.imageName,
+                        latestTag: effectiveConfig.latestTag,
                         containerName: effectiveConfig.containerName,
                         containerPort: effectiveConfig.containerPort
                     )
