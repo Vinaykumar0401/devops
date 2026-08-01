@@ -6,7 +6,7 @@ def call(Map params = [:]) {
 
     withSonarQubeEnv(sonarServer) {
         sh """
-        mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+        mvn sonar:sonar \
         -Dsonar.projectKey=${projectKey} \
         -Dsonar.projectName=${projectName}
         """
