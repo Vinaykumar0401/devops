@@ -59,7 +59,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                    mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0:sonar \
+                    mvn sonar:sonar \
                     -Dsonar.projectKey=petclinic \
                     -Dsonar.projectName=petclinic
                     '''
